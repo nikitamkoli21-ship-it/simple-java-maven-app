@@ -1,17 +1,24 @@
 pipeline {
     agent any
-    options {
-        skipStagesAfterUnstable()
-    }
+
     stages {
-        stage('Build') {
+
+        stage('Checkout') {
             steps {
-                sh 'mvn -B -DskipTests clean package'
+                checkout scm
             }
         }
+
+        stage('Build') {
+            steps {
+                sh 'chmod +x mvnw'
+                sh './mvnw clean compile'
+            }
+        }
+
         stage('Test') {
             steps {
-                sh 'mvn test'
+                sh './mvnw test'
             }
             post {
                 always {
@@ -19,10 +26,25 @@ pipeline {
                 }
             }
         }
-        stage('Deliver') { 
+
+        stage('Package') {
             steps {
-                sh './jenkins/scripts/deliver.sh' 
+                sh './mvnw package -DskipTests'
             }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build SUCCESS 🎉'
+        }
+        failure {
+            echo 'Build FAILED ❌'
         }
     }
 }
